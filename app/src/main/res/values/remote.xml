@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="server_url" translatable="false">setme</string>
+    <string name="server_user" translatable="false">setme</string>
+    <string name="server_password" translatable="false">setme</string>
+</resources>

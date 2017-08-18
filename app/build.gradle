@@ -1,0 +1,36 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 26
+    buildToolsVersion '26.0.1'
+    defaultConfig {
+        applicationId 'com.where.tracker'
+        minSdkVersion 23
+        targetSdkVersion 26
+        versionCode 1
+        versionName '1.0.0'
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    // name the generated APKs using the app id
+    // I could rename the app folder, but I'm scared to break things ;D
+    applicationVariants.all { variant ->
+        variant.outputs.each { output ->
+            def appId = android.defaultConfig.applicationId
+            output.outputFile = new File(output.outputFile.parent, output.outputFile.name.replace(module.name, appId))
+        }
+    }
+}
+
+dependencies {
+    provided 'org.projectlombok:lombok:1.16.18'
+
+    compile 'com.google.android.gms:play-services-location:11.2.0'
+    compile 'com.squareup.retrofit2:retrofit:2.3.0'
+    compile 'com.squareup.retrofit2:converter-gson:2.3.0'
+    compile 'com.jakewharton.threetenabp:threetenabp:1.0.5'
+}

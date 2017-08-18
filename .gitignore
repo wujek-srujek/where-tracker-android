@@ -1,0 +1,24 @@
+/local.properties
+
+# Gradle caches and build directories
+.gradle
+build/
+
+# IDEA
+*.iml
+*.ipr
+*.iws
+out/
+# ignore the contents of the .idea folder
+# except for the explicitly mentioned exceptions
+.idea/*
+!.idea/codeStyleSettings.xml
+!.idea/runConfigurations/
+
+# Finder and temp files
+*~
+.DS_Store
+*.swp
+
+# git worktrees
+worktrees/
