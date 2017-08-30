@@ -232,6 +232,19 @@ public class TrackerActivity extends Activity {
         safeLocationRequest(LOCATION_MANUAL_REQUEST_CODE);
     }
 
+    public void showRoute(View view) {
+        ArrayList<LocationDto> locationDtos = locationDb.getLatest(50);
+
+        if (locationDtos.isEmpty()) {
+            log("DEF", "No locations available");
+            return;
+        }
+
+        Intent intent = new Intent(this, RouteActivity.class);
+        intent.putParcelableArrayListExtra(RouteActivity.LOCATIONS_EXTRA, locationDtos);
+        startActivity(intent);
+    }
+
     public void uploadLocal(View view) {
         int i = 1;
         Map<Long, LocationDto> dtos = locationDb.getNotUploaded();

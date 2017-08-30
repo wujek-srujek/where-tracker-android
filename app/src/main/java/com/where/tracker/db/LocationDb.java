@@ -7,6 +7,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -75,67 +78,69 @@ public class LocationDb implements AutoCloseable {
     synchronized public void insert(LocationDto dto, boolean uploaded) {
         ContentValues values = new ContentValues();
         values.put(
-                LocationDb.Contract.Location.TIMESTAMP_UTC,
+                Contract.Location.TIMESTAMP_UTC,
                 InstantSerializationHelper.toString(dto.getTimestampUtc()));
-        values.put(LocationDb.Contract.Location.TIME_ZONE, dto.getTimeZone().getId());
-        values.put(LocationDb.Contract.Location.LATITUDE, dto.getLatitude());
-        values.put(LocationDb.Contract.Location.LONGITUDE, dto.getLongitude());
-        values.put(LocationDb.Contract.Location.ACCURACY, dto.getAccuracy());
-        values.put(LocationDb.Contract.Location.SAVE_MODE, dto.getSaveMode().name());
-        values.put(LocationDb.Contract.Location.UPLOADED, uploaded ? 1 : 0);
+        values.put(Contract.Location.TIME_ZONE, dto.getTimeZone().getId());
+        values.put(Contract.Location.LATITUDE, dto.getLatitude());
+        values.put(Contract.Location.LONGITUDE, dto.getLongitude());
+        values.put(Contract.Location.ACCURACY, dto.getAccuracy());
+        values.put(Contract.Location.SAVE_MODE, dto.getSaveMode().name());
+        values.put(Contract.Location.UPLOADED, uploaded ? 1 : 0);
 
-        db.insertOrThrow(LocationDb.Contract.Location.TABLE, null, values);
+        db.insertOrThrow(Contract.Location.TABLE, null, values);
+    }
+
+    synchronized public ArrayList<LocationDto> getLatest(int count) {
+        try (Cursor cursor = db.query(
+                Contract.Location.TABLE, null,
+                null, null, null, null,
+                Contract.Location._ID + " desc",
+                String.valueOf(count))) {
+            ArrayList<LocationDto> dtos = new ArrayList<>(cursor.getCount());
+            while (cursor.moveToNext()) {
+                dtos.add(locationDtoFromCursor(cursor));
+            }
+
+            // so let's sort here by timestamp_utc, ascending
+            Collections.sort(dtos, new Comparator<LocationDto>() {
+
+                @Override
+                public int compare(LocationDto left, LocationDto right) {
+                    return left.getTimestampUtc().compareTo(right.getTimestampUtc());
+                }
+            });
+
+            return dtos;
+        }
     }
 
     synchronized public Map<Long, LocationDto> getNotUploaded() {
         try (Cursor cursor = db.query(
-                LocationDb.Contract.Location.TABLE, null,
-                LocationDb.Contract.Location.UPLOADED + " = ?", new String[] { "0" },
+                Contract.Location.TABLE, null,
+                Contract.Location.UPLOADED + " = ?", new String[] { "0" },
                 null, null, null)) {
             Map<Long, LocationDto> dtos = new LinkedHashMap<>(cursor.getCount());
             while (cursor.moveToNext()) {
-                LocationDto dto = new LocationDto();
-                dto.setTimestampUtc(
-                        InstantSerializationHelper.fromString(cursor.getString(
-                                cursor.getColumnIndexOrThrow(LocationDb.Contract.Location.TIMESTAMP_UTC))));
-
-                dto.setTimeZone(
-                        ZoneId.of(cursor.getString(
-                                cursor.getColumnIndexOrThrow(LocationDb.Contract.Location.TIME_ZONE))));
-
-                dto.setLatitude(
-                        cursor.getDouble(
-                                cursor.getColumnIndexOrThrow(LocationDb.Contract.Location.LATITUDE)));
-
-                dto.setLongitude(
-                        cursor.getDouble(
-                                cursor.getColumnIndexOrThrow(LocationDb.Contract.Location.LONGITUDE)));
-
-                dto.setAccuracy(
-                        cursor.getDouble(
-                                cursor.getColumnIndexOrThrow(LocationDb.Contract.Location.ACCURACY)));
-
-                dto.setSaveMode(
-                        LocationDto.SaveMode.valueOf(cursor.getString(
-                                cursor.getColumnIndexOrThrow(LocationDb.Contract.Location.SAVE_MODE))));
+                LocationDto dto = locationDtoFromCursor(cursor);
 
                 dtos.put(
                         cursor.getLong(
-                                cursor.getColumnIndexOrThrow(LocationDb.Contract.Location._ID)),
+                                cursor.getColumnIndexOrThrow(Contract.Location._ID)),
                         dto);
             }
+
             return dtos;
         }
     }
 
     synchronized public int markUploaded(long id) {
         ContentValues values = new ContentValues();
-        values.put(LocationDb.Contract.Location.UPLOADED, 1);
+        values.put(Contract.Location.UPLOADED, 1);
 
         return db.update(
-                LocationDb.Contract.Location.TABLE,
+                Contract.Location.TABLE,
                 values,
-                LocationDb.Contract.Location._ID + " = ?",
+                Contract.Location._ID + " = ?",
                 new String[] { String.valueOf(id) });
     }
 
@@ -145,7 +150,7 @@ public class LocationDb implements AutoCloseable {
         File outputFile = new File(
                 Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
                 "location.db." + DateTimeFormatter.ISO_INSTANT.format(Instant.now()));
-        try (InputStream in = new FileInputStream(context.getDatabasePath(LocationDb.Contract.DATABASE_NAME));
+        try (InputStream in = new FileInputStream(context.getDatabasePath(Contract.DATABASE_NAME));
              OutputStream out = new FileOutputStream(outputFile)) {
             byte[] buffer = new byte[1024];
             int length;
@@ -161,5 +166,34 @@ public class LocationDb implements AutoCloseable {
 
     private void init() {
         db = helper.getWritableDatabase();
+    }
+
+    private LocationDto locationDtoFromCursor(Cursor cursor) {
+        LocationDto locationDto = new LocationDto();
+        locationDto.setTimestampUtc(
+                InstantSerializationHelper.fromString(cursor.getString(
+                        cursor.getColumnIndexOrThrow(Contract.Location.TIMESTAMP_UTC))));
+
+        locationDto.setTimeZone(
+                ZoneId.of(cursor.getString(
+                        cursor.getColumnIndexOrThrow(Contract.Location.TIME_ZONE))));
+
+        locationDto.setLatitude(
+                cursor.getDouble(
+                        cursor.getColumnIndexOrThrow(Contract.Location.LATITUDE)));
+
+        locationDto.setLongitude(
+                cursor.getDouble(
+                        cursor.getColumnIndexOrThrow(Contract.Location.LONGITUDE)));
+
+        locationDto.setAccuracy(
+                cursor.getDouble(
+                        cursor.getColumnIndexOrThrow(Contract.Location.ACCURACY)));
+
+        locationDto.setSaveMode(
+                LocationDto.SaveMode.valueOf(cursor.getString(
+                        cursor.getColumnIndexOrThrow(Contract.Location.SAVE_MODE))));
+
+        return locationDto;
     }
 }
