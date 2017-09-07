@@ -10,7 +10,9 @@ import java.util.Map;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
@@ -217,6 +219,22 @@ public class TrackerActivity extends Activity {
                         break;
                 }
         }
+    }
+
+    @Override
+    public void onBackPressed() {
+        new AlertDialog.Builder(this)
+                .setMessage("Are you sure you want to exit?")
+                .setNegativeButton(android.R.string.no, null)
+                .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+
+                    @Override
+                    public void onClick(DialogInterface arg0, int arg1) {
+                        TrackerActivity.super.onBackPressed();
+                    }
+                })
+                .create()
+                .show();
     }
 
     public void startAutomatic(View view) {
