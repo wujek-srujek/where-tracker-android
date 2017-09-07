@@ -53,7 +53,7 @@ public class RouteActivity extends FragmentActivity implements OnMapReadyCallbac
             if (lastTimestampUtc == null
                     || Duration.between(lastTimestampUtc, timestampUtc).getSeconds() > HOUR_IN_SECONDS) {
                 // new route, finish and add polyline, start a new one
-                if (options != null) {
+                if (options != null && options.getPoints().size() > 1) {
                     googleMap.addPolyline(options);
                     ++routeNo;
                 }
