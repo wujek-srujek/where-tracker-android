@@ -23,8 +23,11 @@ import android.provider.BaseColumns;
 import com.where.tracker.dto.LocationDto;
 import com.where.tracker.helper.InstantSerializationHelper;
 import org.threeten.bp.Instant;
+import org.threeten.bp.LocalDateTime;
 import org.threeten.bp.ZoneId;
+import org.threeten.bp.ZonedDateTime;
 import org.threeten.bp.format.DateTimeFormatter;
+import org.threeten.bp.temporal.ChronoUnit;
 
 
 public class LocationDb implements AutoCloseable {
@@ -90,12 +93,19 @@ public class LocationDb implements AutoCloseable {
         db.insertOrThrow(Contract.Location.TABLE, null, values);
     }
 
-    synchronized public ArrayList<LocationDto> getLatest(int count) {
+    synchronized public ArrayList<LocationDto> getToday() {
+        ZonedDateTime begin = ZonedDateTime.now().truncatedTo(ChronoUnit.DAYS);
+        ZonedDateTime end = begin.plusDays(1);
+        String beginS = InstantSerializationHelper.toString(begin.toInstant());
+        String endS = InstantSerializationHelper.toString(end.toInstant());
+
         try (Cursor cursor = db.query(
                 Contract.Location.TABLE, null,
-                null, null, null, null,
-                Contract.Location._ID + " desc",
-                String.valueOf(count))) {
+                Contract.Location.TIMESTAMP_UTC + " between ? and ?",
+                new String[] { beginS, endS },
+                null, null,
+                Contract.Location.TIMESTAMP_UTC + " desc",
+                null)) {
             ArrayList<LocationDto> dtos = new ArrayList<>(cursor.getCount());
             while (cursor.moveToNext()) {
                 dtos.add(locationDtoFromCursor(cursor));

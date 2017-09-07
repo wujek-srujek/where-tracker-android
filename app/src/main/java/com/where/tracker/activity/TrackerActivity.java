@@ -251,7 +251,7 @@ public class TrackerActivity extends Activity {
     }
 
     public void showRoute(View view) {
-        ArrayList<LocationDto> locationDtos = locationDb.getLatest(50);
+        ArrayList<LocationDto> locationDtos = locationDb.getToday();
 
         if (locationDtos.isEmpty()) {
             log("DEF", "No locations available");
