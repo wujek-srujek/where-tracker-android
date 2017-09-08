@@ -14,6 +14,8 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.JointType;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.maps.model.RoundCap;
 import com.where.tracker.R;
@@ -44,6 +46,7 @@ public class RouteActivity extends FragmentActivity implements OnMapReadyCallbac
 
         int routeNo = 0;
         LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
+        LatLng currentLocation = null;
 
         Instant lastTimestampUtc = null;
         PolylineOptions options = null;
@@ -69,11 +72,15 @@ public class RouteActivity extends FragmentActivity implements OnMapReadyCallbac
             LatLng coordinates = new LatLng(locationDto.getLatitude(), locationDto.getLongitude());
             options.add(coordinates);
             boundsBuilder.include(coordinates);
+            currentLocation = coordinates;
 
             lastTimestampUtc = timestampUtc;
         }
 
         googleMap.addPolyline(options);
+
+        googleMap.addMarker(new MarkerOptions().position(currentLocation));
+
         googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 50));
     }
 }
