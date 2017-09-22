@@ -23,7 +23,6 @@ import android.provider.BaseColumns;
 import com.where.tracker.dto.LocationDto;
 import com.where.tracker.helper.InstantSerializationHelper;
 import org.threeten.bp.Instant;
-import org.threeten.bp.LocalDateTime;
 import org.threeten.bp.ZoneId;
 import org.threeten.bp.ZonedDateTime;
 import org.threeten.bp.format.DateTimeFormatter;
@@ -93,9 +92,14 @@ public class LocationDb implements AutoCloseable {
         db.insertOrThrow(Contract.Location.TABLE, null, values);
     }
 
-    synchronized public ArrayList<LocationDto> getToday() {
-        ZonedDateTime begin = ZonedDateTime.now().truncatedTo(ChronoUnit.DAYS);
-        ZonedDateTime end = begin.plusDays(1);
+    synchronized public ArrayList<LocationDto> getDays(int count) {
+        if (count < 1) {
+            throw new IllegalArgumentException("1 is minimum");
+        }
+
+        ZonedDateTime startOfToday = ZonedDateTime.now().truncatedTo(ChronoUnit.DAYS);
+        ZonedDateTime begin = startOfToday.minusDays(count - 1);
+        ZonedDateTime end = startOfToday.plusDays(1);
         String beginS = InstantSerializationHelper.toString(begin.toInstant());
         String endS = InstantSerializationHelper.toString(end.toInstant());
 

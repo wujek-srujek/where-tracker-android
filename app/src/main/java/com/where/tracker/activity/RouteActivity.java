@@ -41,46 +41,52 @@ public class RouteActivity extends FragmentActivity implements OnMapReadyCallbac
     }
 
     @Override
-    public void onMapReady(GoogleMap googleMap) {
-        List<LocationDto> locationDtos = getIntent().getParcelableArrayListExtra(LOCATIONS_EXTRA);
+    public void onMapReady(final GoogleMap googleMap) {
+        googleMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
 
-        int routeNo = 0;
-        LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
-        LatLng currentLocation = null;
+            @Override
+            public void onMapLoaded() {
+                List<LocationDto> locationDtos = getIntent().getParcelableArrayListExtra(LOCATIONS_EXTRA);
 
-        Instant lastTimestampUtc = null;
-        PolylineOptions options = null;
+                int routeNo = 0;
+                LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
+                LatLng currentLocation = null;
 
-        for (LocationDto locationDto : locationDtos) {
-            Instant timestampUtc = locationDto.getTimestampUtc();
-            if (lastTimestampUtc == null
-                    || Duration.between(lastTimestampUtc, timestampUtc).getSeconds() > HOUR_IN_SECONDS) {
-                // new route, finish and add polyline, start a new one
-                if (options != null && options.getPoints().size() > 1) {
-                    googleMap.addPolyline(options);
-                    ++routeNo;
+                Instant lastTimestampUtc = null;
+                PolylineOptions options = null;
+
+                for (LocationDto locationDto : locationDtos) {
+                    Instant timestampUtc = locationDto.getTimestampUtc();
+                    if (lastTimestampUtc == null
+                            || Duration.between(lastTimestampUtc, timestampUtc).getSeconds() > HOUR_IN_SECONDS) {
+                        // new route, finish and add polyline, start a new one
+                        if (options != null && options.getPoints().size() > 1) {
+                            googleMap.addPolyline(options);
+                            ++routeNo;
+                        }
+
+                        options = new PolylineOptions()
+                                .startCap(new RoundCap())
+                                .endCap(new RoundCap())
+                                .width(15)
+                                .color(COLORS[routeNo % COLORS.length])
+                                .jointType(JointType.ROUND);
+                    }
+
+                    LatLng coordinates = new LatLng(locationDto.getLatitude(), locationDto.getLongitude());
+                    options.add(coordinates);
+                    boundsBuilder.include(coordinates);
+                    currentLocation = coordinates;
+
+                    lastTimestampUtc = timestampUtc;
                 }
 
-                options = new PolylineOptions()
-                        .startCap(new RoundCap())
-                        .endCap(new RoundCap())
-                        .width(15)
-                        .color(COLORS[routeNo % COLORS.length])
-                        .jointType(JointType.ROUND);
+                googleMap.addPolyline(options);
+
+                googleMap.addMarker(new MarkerOptions().position(currentLocation));
+
+                googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 50));
             }
-
-            LatLng coordinates = new LatLng(locationDto.getLatitude(), locationDto.getLongitude());
-            options.add(coordinates);
-            boundsBuilder.include(coordinates);
-            currentLocation = coordinates;
-
-            lastTimestampUtc = timestampUtc;
-        }
-
-        googleMap.addPolyline(options);
-
-        googleMap.addMarker(new MarkerOptions().position(currentLocation));
-
-        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 50));
+        });
     }
 }

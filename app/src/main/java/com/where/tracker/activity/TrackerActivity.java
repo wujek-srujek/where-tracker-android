@@ -23,6 +23,7 @@ import android.os.PowerManager;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.view.View;
+import android.widget.NumberPicker;
 import android.widget.TextView;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.CommonStatusCodes;
@@ -251,16 +252,39 @@ public class TrackerActivity extends Activity {
     }
 
     public void showRoute(View view) {
-        ArrayList<LocationDto> locationDtos = locationDb.getToday();
+        final NumberPicker numberPicker = new NumberPicker(this);
+        numberPicker.setMinValue(1);
+        numberPicker.setMaxValue(365);
+        numberPicker.setValue(1);
 
-        if (locationDtos.isEmpty()) {
-            log("DEF", "No locations available");
-            return;
-        }
+        new AlertDialog.Builder(this)
+                .setTitle("How many days?")
+                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
 
-        Intent intent = new Intent(this, RouteActivity.class);
-        intent.putParcelableArrayListExtra(RouteActivity.LOCATIONS_EXTRA, locationDtos);
-        startActivity(intent);
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        ArrayList<LocationDto> locationDtos = locationDb.getDays(numberPicker.getValue());
+
+                        if (locationDtos.isEmpty()) {
+                            log("DEF", "No locations available");
+                            return;
+                        }
+
+                        Intent intent = new Intent(TrackerActivity.this, RouteActivity.class);
+                        intent.putParcelableArrayListExtra(RouteActivity.LOCATIONS_EXTRA, locationDtos);
+                        startActivity(intent);
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+
+                    }
+                })
+                .setView(numberPicker)
+                .create()
+                .show();
     }
 
     public void uploadLocal(View view) {
