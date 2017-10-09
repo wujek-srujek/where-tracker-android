@@ -12,5 +12,8 @@ public class WhereTrackerApplication extends Application {
         super.onCreate();
 
         AndroidThreeTen.init(this);
+
+        Thread.setDefaultUncaughtExceptionHandler(
+                new LoggingUncaughtExceptionHandler(Thread.getDefaultUncaughtExceptionHandler()));
     }
 }
