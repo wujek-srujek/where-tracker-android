@@ -24,6 +24,7 @@ import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.view.View;
 import android.widget.NumberPicker;
+import android.widget.Switch;
 import android.widget.TextView;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.CommonStatusCodes;
@@ -83,6 +84,8 @@ public class TrackerActivity extends Activity {
 
     private LocationRequest locationRequest;
 
+    private Switch dryRunSwitch;
+
     private TextView logView;
 
     private LocationCallback locationCallback;
@@ -124,6 +127,7 @@ public class TrackerActivity extends Activity {
         locationRequest.setMaxWaitTime(BATCHING_INTERVAL);
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
+        dryRunSwitch = findViewById(R.id.dryRunSwitch);
         logView = findViewById(R.id.logView);
 
         locationCallback = new LocationCallback() {
@@ -230,10 +234,26 @@ public class TrackerActivity extends Activity {
                 .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
 
                     @Override
-                    public void onClick(DialogInterface arg0, int arg1) {
+                    public void onClick(DialogInterface dialog, int which) {
                         TrackerActivity.super.onBackPressed();
                     }
                 })
+                .create()
+                .show();
+    }
+
+    public void changeDryRun(View view) {
+        new AlertDialog.Builder(this)
+                .setMessage("Are you sure you want to change this setting?")
+                .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        // toggle back
+                        dryRunSwitch.toggle();
+                    }
+                })
+                .setPositiveButton(android.R.string.yes, null)
                 .create()
                 .show();
     }
@@ -249,6 +269,26 @@ public class TrackerActivity extends Activity {
 
     public void manualSave(View view) {
         safeLocationRequest(LOCATION_MANUAL_REQUEST_CODE);
+    }
+
+    public void uploadLocal(View view) {
+        int i = 1;
+        Map<Long, LocationDto> dtos = locationDb.getNotUploaded();
+        log("LOC", "Count: " + dtos.size());
+        // upload one by one, this is slower but will be triggered manually for now
+        // and I actually want this granularity
+        for (Map.Entry<Long, LocationDto> entry : dtos.entrySet()) {
+            processLocalLocationDtos(Collections.singletonList(entry.getValue()), entry.getKey(), "LOC." + i);
+            ++i;
+        }
+    }
+
+    public void exportDb(View view) {
+        exportDbWithPermission();
+    }
+
+    public void clearLog(View view) {
+        logView.setText(null);
     }
 
     public void showRoute(View view) {
@@ -285,26 +325,6 @@ public class TrackerActivity extends Activity {
                 .setView(numberPicker)
                 .create()
                 .show();
-    }
-
-    public void uploadLocal(View view) {
-        int i = 1;
-        Map<Long, LocationDto> dtos = locationDb.getNotUploaded();
-        log("LOC", "Count: " + dtos.size());
-        // upload one by one, this is slower but will be triggered manually for now
-        // and I actually want this granularity
-        for (Map.Entry<Long, LocationDto> entry : dtos.entrySet()) {
-            processLocalLocationDtos(Collections.singletonList(entry.getValue()), entry.getKey(), "LOC." + i);
-            ++i;
-        }
-    }
-
-    public void exportDb(View view) {
-        exportDbWithPermission();
-    }
-
-    public void clearLog(View view) {
-        logView.setText(null);
     }
 
     private void safeLocationRequest(Integer requestCode) {
@@ -459,6 +479,11 @@ public class TrackerActivity extends Activity {
     }
 
     private void processNewLocationDtos(List<LocationDto> dtos, final String tag) {
+        if (!dryRunSwitch.isChecked()) {
+            log("DRY." + tag, "Not processing locations");
+            return;
+        }
+
         final LocationListDto listDto = new LocationListDto();
         listDto.setLocations(dtos);
 
@@ -492,6 +517,11 @@ public class TrackerActivity extends Activity {
     }
 
     private void processLocalLocationDtos(List<LocationDto> dtos, final long id, final String tag) {
+        if (!dryRunSwitch.isChecked()) {
+            log("DRY." + tag, "Not processing local locations");
+            return;
+        }
+
         final LocationListDto listDto = new LocationListDto();
         listDto.setLocations(dtos);
 

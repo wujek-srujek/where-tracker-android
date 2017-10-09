@@ -17,6 +17,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
+            <Switch
+                    android:id="@+id/dryRunSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:checked="true"
+                    android:onClick="changeDryRun"/>
+
             <Button
                     android:text="Start"
                     android:layout_width="wrap_content"
@@ -37,13 +45,6 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:onClick="manualSave"/>
-
-            <Button
-                    android:text="Route"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:onClick="showRoute"/>
 
         </LinearLayout>
 
@@ -72,6 +73,13 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:onClick="clearLog"/>
+
+            <Button
+                    android:text="Route"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:onClick="showRoute"/>
 
         </LinearLayout>
 
