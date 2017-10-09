@@ -22,6 +22,7 @@ import android.os.Bundle;
 import android.os.PowerManager;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.NumberPicker;
 import android.widget.Switch;
@@ -289,10 +290,19 @@ public class TrackerActivity extends Activity {
     }
 
     public void showRoute(View view) {
-        final NumberPicker numberPicker = new NumberPicker(this);
-        numberPicker.setMinValue(1);
-        numberPicker.setMaxValue(365);
-        numberPicker.setValue(1);
+        LayoutInflater inflater = getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.dialog_route, null);
+
+        final NumberPicker fromDaysAgoPicker = dialogView.findViewById(R.id.fromDaysAgoPicker);
+        final NumberPicker numberOfDaysPicker = dialogView.findViewById(R.id.numberOfDaysPicker);
+
+        fromDaysAgoPicker.setMinValue(1);
+        fromDaysAgoPicker.setMaxValue(365);
+        fromDaysAgoPicker.setValue(1);
+
+        numberOfDaysPicker.setMinValue(1);
+        numberOfDaysPicker.setMaxValue(365);
+        numberOfDaysPicker.setValue(1);
 
         new AlertDialog.Builder(this)
                 .setTitle("How many days?")
@@ -300,7 +310,8 @@ public class TrackerActivity extends Activity {
 
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        ArrayList<LocationDto> locationDtos = locationDb.getDays(numberPicker.getValue());
+                        ArrayList<LocationDto> locationDtos = locationDb.getDays(
+                                fromDaysAgoPicker.getValue(), numberOfDaysPicker.getValue());
 
                         if (locationDtos.isEmpty()) {
                             log("DEF", "No locations available");
@@ -319,7 +330,7 @@ public class TrackerActivity extends Activity {
 
                     }
                 })
-                .setView(numberPicker)
+                .setView(dialogView)
                 .create()
                 .show();
     }

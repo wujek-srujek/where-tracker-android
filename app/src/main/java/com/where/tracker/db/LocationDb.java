@@ -92,14 +92,18 @@ public class LocationDb implements AutoCloseable {
         db.insertOrThrow(Contract.Location.TABLE, null, values);
     }
 
-    synchronized public ArrayList<LocationDto> getDays(int count) {
-        if (count < 1) {
-            throw new IllegalArgumentException("1 is minimum");
+    synchronized public ArrayList<LocationDto> getDays(int fromDaysAgo, int numberOfDays) {
+        if (fromDaysAgo < 1) {
+            throw new IllegalArgumentException("1 is minimum for fromDaysAgo");
+        }
+
+        if (numberOfDays < 1) {
+            throw new IllegalArgumentException("1 is minimum for numberOfDays");
         }
 
         ZonedDateTime startOfToday = ZonedDateTime.now().truncatedTo(ChronoUnit.DAYS);
-        ZonedDateTime begin = startOfToday.minusDays(count - 1);
-        ZonedDateTime end = startOfToday.plusDays(1);
+        ZonedDateTime begin = startOfToday.minusDays(fromDaysAgo - 1);
+        ZonedDateTime end = begin.plusDays(numberOfDays);
         String beginS = InstantSerializationHelper.toString(begin.toInstant());
         String endS = InstantSerializationHelper.toString(end.toInstant());
 
