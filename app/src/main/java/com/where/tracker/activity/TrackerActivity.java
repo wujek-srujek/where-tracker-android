@@ -43,7 +43,6 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.jakewharton.threetenabp.AndroidThreeTen;
 import com.where.tracker.R;
 import com.where.tracker.db.LocationDb;
 import com.where.tracker.db.LocationDbSqlHelper;
@@ -95,8 +94,6 @@ public class TrackerActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        AndroidThreeTen.init(this);
 
         setContentView(R.layout.activity_tracker);
 
