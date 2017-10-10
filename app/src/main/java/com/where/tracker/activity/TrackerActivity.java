@@ -11,6 +11,9 @@ import java.util.Map;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -77,6 +80,8 @@ public class TrackerActivity extends Activity {
     private static final int AUTOMATIC_INTERVAL = 15 * 60 * 1000; // record every 15 minutes
 
     private static final int BATCHING_INTERVAL = 60 * 60 * 1000; // batch processing by hour
+
+    private static final int NOTIFICATION_ID = 17;
 
     private WhereService whereService;
 
@@ -154,6 +159,7 @@ public class TrackerActivity extends Activity {
         super.onDestroy();
 
         locationDb.close();
+        hideNotification();
     }
 
     @Override
@@ -262,6 +268,7 @@ public class TrackerActivity extends Activity {
 
     public void stopAutomatic(View view) {
         fusedLocationClient.removeLocationUpdates(locationCallback);
+        hideNotification();
         log("DEF", "Automatic tracking stopped");
     }
 
@@ -431,6 +438,7 @@ public class TrackerActivity extends Activity {
 
     private void startAutomatic() {
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
+        showNotification();
     }
 
     private void manualSave() {
@@ -574,5 +582,25 @@ public class TrackerActivity extends Activity {
             entry = "[" + tag + "] " + entry;
         }
         logView.setText(entry + "\n" + logView.getText());
+    }
+
+    private void showNotification() {
+        Intent notificationIntent = new Intent(this, TrackerActivity.class);
+        notificationIntent.setAction("android.intent.action.MAIN");
+        notificationIntent.addCategory("android.intent.category.LAUNCHER");
+
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
+
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        Notification.Builder builder = new Notification.Builder(this)
+                .setSmallIcon(R.drawable.ic_stat_tracking)
+                .setContentTitle("Where tracker")
+                .setOngoing(true)
+                .setContentIntent(pendingIntent);
+        notificationManager.notify(NOTIFICATION_ID, builder.build());
+    }
+
+    private void hideNotification() {
+        ((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE)).cancel(NOTIFICATION_ID);
     }
 }

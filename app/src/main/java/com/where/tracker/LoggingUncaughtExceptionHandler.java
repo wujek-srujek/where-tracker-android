@@ -7,6 +7,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 
+import android.app.NotificationManager;
 import android.os.Environment;
 import org.threeten.bp.Instant;
 import org.threeten.bp.format.DateTimeFormatter;
@@ -16,12 +17,18 @@ public class LoggingUncaughtExceptionHandler implements Thread.UncaughtException
 
     private final Thread.UncaughtExceptionHandler defaultHandler;
 
-    public LoggingUncaughtExceptionHandler(Thread.UncaughtExceptionHandler defaultHandler) {
+    private final NotificationManager notificationManager;
+
+    public LoggingUncaughtExceptionHandler(Thread.UncaughtExceptionHandler defaultHandler,
+                                           NotificationManager notificationManager) {
         this.defaultHandler = defaultHandler;
+        this.notificationManager = notificationManager;
     }
 
     @Override
     public void uncaughtException(Thread thread, Throwable throwable) {
+        notificationManager.cancelAll();
+
         File outputFile = new File(
                 Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
                 "crash." + DateTimeFormatter.ISO_INSTANT.format(Instant.now()) + ".txt");
