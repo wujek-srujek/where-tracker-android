@@ -1,12 +1,11 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 26
-    buildToolsVersion '26.0.1'
+    compileSdkVersion 27
     defaultConfig {
         applicationId 'com.where.tracker'
         minSdkVersion 23
-        targetSdkVersion 26
+        targetSdkVersion 27
         versionCode 1
         versionName '1.0.0'
     }
@@ -20,18 +19,24 @@ android {
     // I could rename the app folder, but I'm scared to break things ;D
     applicationVariants.all { variant ->
         variant.outputs.each { output ->
-            def appId = android.defaultConfig.applicationId
-            output.outputFile = new File(output.outputFile.parent, output.outputFile.name.replace(module.name, appId))
+            output.outputFileName = output.outputFileName.replace(module.name, android.defaultConfig.applicationId)
         }
     }
 }
 
-dependencies {
-    provided 'org.projectlombok:lombok:1.16.18'
+ext {
+    lombok = 'org.projectlombok:lombok:1.16.18'
+    playServicesVersion = '11.8.0'
+    retrofitVersion = '2.3.0'
+}
 
-    compile 'com.google.android.gms:play-services-location:11.2.0'
-    compile 'com.google.android.gms:play-services-maps:11.2.0'
-    compile 'com.squareup.retrofit2:retrofit:2.3.0'
-    compile 'com.squareup.retrofit2:converter-gson:2.3.0'
-    compile 'com.jakewharton.threetenabp:threetenabp:1.0.5'
+dependencies {
+    annotationProcessor lombok
+    compileOnly lombok
+
+    implementation "com.google.android.gms:play-services-location:$playServicesVersion"
+    implementation "com.google.android.gms:play-services-maps:$playServicesVersion"
+    implementation "com.squareup.retrofit2:retrofit:$retrofitVersion"
+    implementation "com.squareup.retrofit2:converter-gson:$retrofitVersion"
+    implementation 'com.jakewharton.threetenabp:threetenabp:1.0.5'
 }
