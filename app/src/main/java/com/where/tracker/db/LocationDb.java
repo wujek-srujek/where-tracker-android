@@ -18,14 +18,11 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.os.Environment;
 import android.provider.BaseColumns;
 import com.where.tracker.dto.LocationDto;
 import com.where.tracker.helper.InstantSerializationHelper;
-import org.threeten.bp.Instant;
 import org.threeten.bp.ZoneId;
 import org.threeten.bp.ZonedDateTime;
-import org.threeten.bp.format.DateTimeFormatter;
 import org.threeten.bp.temporal.ChronoUnit;
 
 
@@ -151,23 +148,20 @@ public class LocationDb implements AutoCloseable {
         }
     }
 
-    synchronized public int markUploaded(long id) {
+    synchronized public void markUploaded(long id) {
         ContentValues values = new ContentValues();
         values.put(Contract.Location.UPLOADED, 1);
 
-        return db.update(
+        db.update(
                 Contract.Location.TABLE,
                 values,
                 Contract.Location._ID + " = ?",
                 new String[] { String.valueOf(id) });
     }
 
-    synchronized public File exportDb(Context context) throws IOException {
+    synchronized public void exportDb(Context context, File outputFile) throws IOException {
         db.close();
 
-        File outputFile = new File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                "location.db." + DateTimeFormatter.ISO_INSTANT.format(Instant.now()));
         try (InputStream in = new FileInputStream(context.getDatabasePath(Contract.DATABASE_NAME));
              OutputStream out = new FileOutputStream(outputFile)) {
             byte[] buffer = new byte[1024];
@@ -178,8 +172,6 @@ public class LocationDb implements AutoCloseable {
         } finally {
             init();
         }
-
-        return outputFile;
     }
 
     private void init() {

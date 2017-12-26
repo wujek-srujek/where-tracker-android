@@ -32,8 +32,11 @@
 
         <activity
                 android:name=".activity.RouteActivity"
-                android:label="Route">
-        </activity>
+                android:label="Route"/>
+
+        <service
+                android:name=".service.WhereTrackingService"
+                android:exported="false"/>
     </application>
 
 </manifest>

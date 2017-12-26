@@ -23,7 +23,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:checked="true"
-                    android:onClick="changeDryRun"/>
+                    android:onClick="toggleDryRun"/>
 
             <Button
                     android:text="Start"
