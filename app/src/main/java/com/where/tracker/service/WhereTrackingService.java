@@ -31,7 +31,6 @@ import com.google.gson.GsonBuilder;
 import com.where.tracker.R;
 import com.where.tracker.activity.TrackerActivity;
 import com.where.tracker.db.LocationDb;
-import com.where.tracker.db.LocationDbSqlHelper;
 import com.where.tracker.dto.LocalLocationResultDto;
 import com.where.tracker.dto.LocationDto;
 import com.where.tracker.dto.LocationListDto;
@@ -131,16 +130,9 @@ public class WhereTrackingService extends Service {
 
         locationCallback = new LocationProcessor();
 
-        locationDb = new LocationDb(new LocationDbSqlHelper(this));
+        locationDb = LocationDb.get();
 
         broadcastManager = LocalBroadcastManager.getInstance(this);
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-
-        locationDb.close();
     }
 
     @Override

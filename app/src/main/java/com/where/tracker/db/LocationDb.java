@@ -26,7 +26,7 @@ import org.threeten.bp.ZonedDateTime;
 import org.threeten.bp.temporal.ChronoUnit;
 
 
-public class LocationDb implements AutoCloseable {
+public class LocationDb {
 
     public static final class Contract {
 
@@ -58,19 +58,32 @@ public class LocationDb implements AutoCloseable {
     }
 
 
+    private static LocationDb INSTANCE;
+
+    synchronized public static void init(Context context) {
+        if (INSTANCE != null) {
+            throw new IllegalStateException("already initialized");
+        }
+
+        INSTANCE = new LocationDb(new LocationDbSqlHelper(context.getApplicationContext()));
+    }
+
+    synchronized public static LocationDb get() {
+        if (INSTANCE == null) {
+            throw new IllegalStateException("not initialized yet");
+        }
+
+        return INSTANCE;
+    }
+
     private final SQLiteOpenHelper helper;
 
     private SQLiteDatabase db;
 
-    public LocationDb(SQLiteOpenHelper helper) {
+    private LocationDb(SQLiteOpenHelper helper) {
         this.helper = helper;
 
         init();
-    }
-
-    @Override
-    synchronized public void close() {
-        db.close();
     }
 
     // each insert is a separate transaction, seems safer as at least some data may be saved

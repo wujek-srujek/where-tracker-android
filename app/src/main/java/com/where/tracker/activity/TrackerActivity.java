@@ -51,7 +51,6 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.where.tracker.R;
 import com.where.tracker.db.LocationDb;
-import com.where.tracker.db.LocationDbSqlHelper;
 import com.where.tracker.dto.LocalLocationResultDto;
 import com.where.tracker.dto.LocationDto;
 import com.where.tracker.dto.NewLocationResultDto;
@@ -104,7 +103,7 @@ public class TrackerActivity extends Activity {
         locationRequest.setMaxWaitTime(BATCHING_INTERVAL);
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
-        locationDb = new LocationDb(new LocationDbSqlHelper(this));
+        locationDb = LocationDb.get();
 
         LocalBroadcastManager broadcastManager = LocalBroadcastManager.getInstance(this);
         broadcastManager.registerReceiver(
@@ -118,13 +117,6 @@ public class TrackerActivity extends Activity {
                 new IntentFilter(WhereTrackingService.BROADCAST_NEW_MESSAGE));
 
         log("DEF", "Activity created");
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-
-        locationDb.close();
     }
 
     @Override
