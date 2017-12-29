@@ -38,6 +38,8 @@ import com.where.tracker.dto.NewLocationResultDto;
 import com.where.tracker.dto.NewLocationsResultDto;
 import com.where.tracker.gson.InstantSerializer;
 import com.where.tracker.gson.ZoneIdSerializer;
+import com.where.tracker.helper.DateTimeHelper;
+import com.where.tracker.helper.SpannableHelper;
 import com.where.tracker.remote.AuthInterceptor;
 import com.where.tracker.remote.WhereService;
 import okhttp3.OkHttpClient;
@@ -323,25 +325,27 @@ public class WhereTrackingService extends Service {
                 "Stop", stopPendingIntent)
                 .build();
 
-        String text;
-        if (location == null) {
-            text = "No location yet";
-        } else {
-            text = LocalDateTime.ofInstant(
-                    Instant.ofEpochMilli(location.getTime()),
-                    ZoneId.systemDefault()).toString();
-        }
-
         Notification.Builder builder = new Notification.Builder(this)
                 .setOngoing(true)
                 .setSmallIcon(R.drawable.ic_stat_tracking)
-                .setContentText(text)
-                .setContentTitle("Last location timestamp")
                 .setContentIntent(activityPendingIntent)
                 .addAction(stopAction);
 
+        if (location == null) {
+            builder = builder.setContentText("No location yet");
+        } else {
+            LocalDateTime lastLocationDateTime = LocalDateTime.ofInstant(
+                    Instant.ofEpochMilli(location.getTime()),
+                    ZoneId.systemDefault());
+            builder = builder
+                    .setContentTitle("Last location timestamp")
+                    .setContentText(SpannableHelper.join(" ",
+                            DateTimeHelper.date(lastLocationDateTime),
+                            SpannableHelper.boldString(DateTimeHelper.time(lastLocationDateTime))));
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            builder.setChannelId(CHANNEL_ID);
+            builder = builder.setChannelId(CHANNEL_ID);
         }
 
         return builder.build();

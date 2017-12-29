@@ -17,7 +17,6 @@ import android.content.IntentFilter;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -26,12 +25,7 @@ import android.os.PowerManager;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.v4.content.LocalBroadcastManager;
-import android.text.SpannableString;
 import android.text.SpannableStringBuilder;
-import android.text.Spanned;
-import android.text.style.CharacterStyle;
-import android.text.style.ForegroundColorSpan;
-import android.text.style.StyleSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.NumberPicker;
@@ -55,6 +49,8 @@ import com.where.tracker.dto.LocalLocationResultDto;
 import com.where.tracker.dto.LocationDto;
 import com.where.tracker.dto.NewLocationResultDto;
 import com.where.tracker.dto.NewLocationsResultDto;
+import com.where.tracker.helper.DateTimeHelper;
+import com.where.tracker.helper.SpannableHelper;
 import com.where.tracker.service.WhereTrackingService;
 import org.threeten.bp.Instant;
 import org.threeten.bp.LocalDateTime;
@@ -467,23 +463,6 @@ public class TrackerActivity extends Activity {
         return !dryRunSwitch.isChecked();
     }
 
-    private CharSequence coloredString(CharSequence charSequence, int color) {
-        return styledString(charSequence, new ForegroundColorSpan(color));
-    }
-
-    private CharSequence boldString(CharSequence charSequence) {
-        return styledString(charSequence, new StyleSpan(Typeface.BOLD));
-    }
-
-    private CharSequence styledString(CharSequence charSequence, CharacterStyle... styles) {
-        SpannableString spannable = new SpannableString(charSequence);
-        for (CharacterStyle style : styles) {
-            spannable.setSpan(style, 0, spannable.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        }
-
-        return spannable;
-    }
-
 
     private class NewLocationsResultReceiver extends BroadcastReceiver {
 
@@ -503,11 +482,15 @@ public class TrackerActivity extends Activity {
                     newLocationsResultDto.getNewLocationResultDtos();
 
             String headerTag = "#" + receiveCounter;
-            CharSequence headerLine1 = new SpannableStringBuilder(String.valueOf(newLocationResultDtos.size()))
-                    .append(" locations at ").append(coloredString(now.toString(), Color.BLUE));
+            CharSequence headerLine1 = SpannableHelper.join(" ",
+                    SpannableHelper.coloredString(String.valueOf(newLocationResultDtos.size()), Color.BLUE),
+                    "location(s) at",
+                    DateTimeHelper.date(now),
+                    SpannableHelper.coloredString(DateTimeHelper.time(now), Color.BLUE));
 
-            SpannableStringBuilder headerLine2 = new SpannableStringBuilder("Upload: ")
-                    .append(coloredDetail(newLocationsResultDto.isSuccess(), newLocationsResultDto.getUploadMessage()));
+            CharSequence headerLine2 = SpannableHelper.join(" ",
+                    "Upload:",
+                    coloredDetail(newLocationsResultDto.isSuccess(), newLocationsResultDto.getUploadMessage()));
 
             log(headerTag, headerLine1, headerLine2);
 
@@ -522,17 +505,28 @@ public class TrackerActivity extends Activity {
                 LocalDateTime locationDateTime = LocalDateTime.ofInstant(
                         locationDto.getTimestampUtc(), ZoneId.systemDefault());
 
-                CharSequence line1 = new SpannableStringBuilder(boldString(locationDateTime.toString()))
-                        .append(" ~ ").append(String.valueOf(locationDto.getAccuracy()));
+                CharSequence line1 = SpannableHelper.join(" ",
+                        DateTimeHelper.date(locationDateTime),
+                        SpannableHelper.boldString(DateTimeHelper.time(locationDateTime)),
+                        "~",
+                        String.valueOf(locationDto.getAccuracy()));
 
-                CharSequence line2 = locationDto.getLatitude() + ", " + locationDto.getLongitude();
+                String modeStr = String.valueOf(locationDto.getSaveMode());
+                CharSequence mode;
                 if (locationDto.getSaveMode() == LocationDto.SaveMode.MANUAL) {
-                    line2 = new SpannableStringBuilder(line2)
-                            .append(", ").append(boldString(String.valueOf(locationDto.getSaveMode())));
+                    mode = SpannableHelper.boldString(modeStr);
+                } else {
+                    mode = modeStr;
                 }
 
-                SpannableStringBuilder line3 = new SpannableStringBuilder("Save: ")
-                        .append(coloredDetail(newLocationResultDto.isSuccess(), newLocationResultDto.getSaveMessage()));
+                CharSequence line2 = SpannableHelper.join(", ",
+                        String.valueOf(locationDto.getLatitude()),
+                        String.valueOf(locationDto.getLongitude()),
+                        mode);
+
+                CharSequence line3 = SpannableHelper.join(" ",
+                        "Save:",
+                        coloredDetail(newLocationResultDto.isSuccess(), newLocationResultDto.getSaveMessage()));
 
                 log(locationTag, line1, line2, line3);
                 ++i;
@@ -542,9 +536,9 @@ public class TrackerActivity extends Activity {
         private CharSequence coloredDetail(boolean success, CharSequence message) {
             CharSequence detail;
             if (isDryRun()) {
-                detail = coloredString(message, COLOR_ORANGE);
+                detail = SpannableHelper.coloredString(message, COLOR_ORANGE);
             } else if (!success) {
-                detail = coloredString(message, Color.RED);
+                detail = SpannableHelper.coloredString(message, Color.RED);
             } else {
                 detail = message;
             }
@@ -561,25 +555,23 @@ public class TrackerActivity extends Activity {
             LocalLocationResultDto localLocationResultDto =
                     intent.getParcelableExtra(WhereTrackingService.EXTRA_PAYLOAD);
 
-            SpannableStringBuilder line1 = new SpannableStringBuilder("Upload: ");
             CharSequence line1Detail;
             if (localLocationResultDto.isUploadSuccess()) {
                 line1Detail = localLocationResultDto.getUploadMessage();
             } else {
-                line1Detail = coloredString(localLocationResultDto.getUploadMessage(), Color.RED);
+                line1Detail = SpannableHelper.coloredString(localLocationResultDto.getUploadMessage(), Color.RED);
             }
-            line1.append(line1Detail);
+            CharSequence line1 = SpannableHelper.join(" ", "Upload:", line1Detail);
 
-            SpannableStringBuilder line2 = new SpannableStringBuilder("Mark: ");
             CharSequence line2Detail;
             if (!localLocationResultDto.isUploadSuccess()) {
-                line2Detail = coloredString(localLocationResultDto.getMarkMessage(), COLOR_ORANGE);
+                line2Detail = SpannableHelper.coloredString(localLocationResultDto.getMarkMessage(), COLOR_ORANGE);
             } else if (!localLocationResultDto.isMarkSuccess()) {
-                line2Detail = coloredString(localLocationResultDto.getMarkMessage(), Color.RED);
+                line2Detail = SpannableHelper.coloredString(localLocationResultDto.getMarkMessage(), Color.RED);
             } else {
                 line2Detail = localLocationResultDto.getMarkMessage();
             }
-            line2.append(line2Detail);
+            CharSequence line2 = SpannableHelper.join(" ", "Mark:", line2Detail);
 
             log("LOC", line1, line2);
         }
