@@ -68,9 +68,9 @@ public class TrackerActivity extends Activity {
 
     private static final int WRITE_REQUEST_CODE = 4;
 
-    private static final int AUTOMATIC_INTERVAL = 10 * 60 * 1000; // record every 10 minutes
+    private static final int AUTOMATIC_INTERVAL = 10 * 60 * 1000; // record at least every 10 minutes
 
-    private static final int BATCHING_INTERVAL = 30 * 60 * 1000; // batch processing by half hour
+    private static final int BATCHING_INTERVAL = 60 * 60 * 1000; // batch processing by hour
 
     private static final int COLOR_ORANGE = Color.argb(255, 255, 165, 0);
 
