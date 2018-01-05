@@ -3,7 +3,6 @@ package com.where.tracker.activity;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 import android.Manifest;
@@ -414,16 +413,9 @@ public class TrackerActivity extends Activity {
 
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        ArrayList<LocationDto> locationDtos = locationDb.getDays(
-                                fromDaysAgoPicker.getValue(), numberOfDaysPicker.getValue());
-
-                        if (locationDtos.isEmpty()) {
-                            log("RT", "No locations available");
-                            return;
-                        }
-
                         Intent intent = new Intent(TrackerActivity.this, RouteActivity.class);
-                        intent.putParcelableArrayListExtra(RouteActivity.LOCATIONS_EXTRA, locationDtos);
+                        intent.putExtra(RouteActivity.EXTRA_FROM_DAYS_AGO, fromDaysAgoPicker.getValue());
+                        intent.putExtra(RouteActivity.EXTRA_NUMBER_OF_DAYS, numberOfDaysPicker.getValue());
                         startActivity(intent);
                         log("DEF", "Showing route");
                     }
