@@ -397,6 +397,7 @@ public class TrackerActivity extends Activity {
 
         final NumberPicker fromDaysAgoPicker = dialogView.findViewById(R.id.fromDaysAgoPicker);
         final NumberPicker numberOfDaysPicker = dialogView.findViewById(R.id.numberOfDaysPicker);
+        final Switch continuousSwitch = dialogView.findViewById(R.id.continuousSwitch);
 
         fromDaysAgoPicker.setMinValue(1);
         fromDaysAgoPicker.setMaxValue(365);
@@ -416,6 +417,7 @@ public class TrackerActivity extends Activity {
                         Intent intent = new Intent(TrackerActivity.this, RouteActivity.class);
                         intent.putExtra(RouteActivity.EXTRA_FROM_DAYS_AGO, fromDaysAgoPicker.getValue());
                         intent.putExtra(RouteActivity.EXTRA_NUMBER_OF_DAYS, numberOfDaysPicker.getValue());
+                        intent.putExtra(RouteActivity.EXTRA_CONTINUOUS, continuousSwitch.isChecked());
                         startActivity(intent);
                         log("DEF", "Showing route");
                     }

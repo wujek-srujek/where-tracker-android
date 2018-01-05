@@ -35,6 +35,8 @@ public class RouteActivity extends FragmentActivity implements OnMapReadyCallbac
 
     public static final String EXTRA_NUMBER_OF_DAYS = PKG + "number_of_days";
 
+    public static final String EXTRA_CONTINUOUS = PKG + "continuous";
+
     private static final int[] COLORS = {
             Color.RED, Color.GREEN, Color.BLUE,
             Color.CYAN, Color.MAGENTA, Color.YELLOW,
@@ -70,6 +72,7 @@ public class RouteActivity extends FragmentActivity implements OnMapReadyCallbac
         Intent startIntent = getIntent();
         int fromDaysAgo = startIntent.getIntExtra(EXTRA_FROM_DAYS_AGO, 1);
         int numberOfDays = startIntent.getIntExtra(EXTRA_NUMBER_OF_DAYS, 1);
+        boolean continuous = startIntent.getBooleanExtra(EXTRA_CONTINUOUS, false);
 
         List<LocationDto> locationDtos = locationDb.getDays(fromDaysAgo, numberOfDays);
 
@@ -99,7 +102,7 @@ public class RouteActivity extends FragmentActivity implements OnMapReadyCallbac
         for (LocationDto locationDto : locationDtos) {
             Instant timestampUtc = locationDto.getTimestampUtc();
             if (lastTimestampUtc == null
-                    || Duration.between(lastTimestampUtc, timestampUtc).getSeconds() > HOUR_IN_SECONDS) {
+                    || Duration.between(lastTimestampUtc, timestampUtc).getSeconds() > HOUR_IN_SECONDS && !continuous) {
                 // new route, finish and add polyline, start a new one
                 if (options != null && options.getPoints().size() > 1) {
                     googleMap.addPolyline(options);
