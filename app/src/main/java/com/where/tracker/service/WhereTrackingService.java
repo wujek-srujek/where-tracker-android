@@ -338,10 +338,12 @@ public class WhereTrackingService extends Service {
                     Instant.ofEpochMilli(location.getTime()),
                     ZoneId.systemDefault());
             builder = builder
-                    .setContentTitle("Last location timestamp")
+                    .setContentTitle("Last location info")
                     .setContentText(SpannableHelper.join(" ",
                             DateTimeHelper.date(lastLocationDateTime),
-                            SpannableHelper.boldString(DateTimeHelper.time(lastLocationDateTime))));
+                            SpannableHelper.boldString(DateTimeHelper.time(lastLocationDateTime)),
+                            "~",
+                            String.valueOf(location.getAccuracy())));
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
