@@ -300,13 +300,15 @@ public class WhereTrackingService extends Service {
 
         // upload one by one, this is slower than bulk but will be triggered manually for now
         // and I actually want this granularity to easily be able to mark single locations
+        int ordinal = 0;
         for (Map.Entry<Long, LocationDto> entry : locationDb.getNotUploaded().entrySet()) {
+            ++ordinal;
             LocationDto locationDto = entry.getValue();
             List<LocationDto> locationDtos = Collections.singletonList(locationDto);
             LocationListDto listDto = new LocationListDto();
             listDto.setLocations(locationDtos);
 
-            whereService.saveLocations(listDto).enqueue(new LocalLocationCallback(entry.getKey()));
+            whereService.saveLocations(listDto).enqueue(new LocalLocationCallback(entry.getKey(), ordinal));
         }
         broadcastMessage("Local locations upload triggered");
     }
@@ -443,10 +445,13 @@ public class WhereTrackingService extends Service {
 
         private final long locationId;
 
+        private final int ordinal;
+
         private final LocalLocationResultDto localLocationResultDto;
 
-        private LocalLocationCallback(long locationId) {
+        private LocalLocationCallback(long locationId, int ordinal) {
             this.locationId = locationId;
+            this.ordinal = ordinal;
             localLocationResultDto = new LocalLocationResultDto();
         }
 
@@ -461,6 +466,7 @@ public class WhereTrackingService extends Service {
         }
 
         private void process(CharSequence uploadMessage, boolean uploaded) {
+            localLocationResultDto.setOrdinal(ordinal);
             localLocationResultDto.setUploadMessage(uploadMessage);
             if (uploaded) {
                 localLocationResultDto.setUploadSuccess(true);

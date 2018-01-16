@@ -567,7 +567,7 @@ public class TrackerActivity extends Activity {
             }
             CharSequence line2 = SpannableHelper.join(" ", "Mark:", line2Detail);
 
-            log("LOC", line1, line2);
+            log("LOC." + localLocationResultDto.getOrdinal(), line1, line2);
         }
     }
 

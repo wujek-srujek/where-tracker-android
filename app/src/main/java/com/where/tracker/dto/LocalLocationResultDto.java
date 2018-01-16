@@ -14,6 +14,8 @@ import lombok.Setter;
 @NoArgsConstructor
 public class LocalLocationResultDto implements Parcelable {
 
+    private int ordinal;
+
     private boolean uploadSuccess;
 
     private CharSequence uploadMessage;
