@@ -1,7 +1,6 @@
 package com.where.tracker.service;
 
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +33,6 @@ import com.where.tracker.dto.LocalLocationResultDto;
 import com.where.tracker.dto.LocationDto;
 import com.where.tracker.dto.LocationListDto;
 import com.where.tracker.dto.NewLocationResultDto;
-import com.where.tracker.dto.NewLocationsResultDto;
 import com.where.tracker.gson.InstantSerializer;
 import com.where.tracker.gson.ZoneIdSerializer;
 import com.where.tracker.helper.DateTimeHelper;
@@ -42,6 +40,7 @@ import com.where.tracker.helper.SpannableHelper;
 import com.where.tracker.remote.AuthInterceptor;
 import com.where.tracker.remote.WhereService;
 import okhttp3.OkHttpClient;
+import org.threeten.bp.Duration;
 import org.threeten.bp.Instant;
 import org.threeten.bp.LocalDateTime;
 import org.threeten.bp.ZoneId;
@@ -68,7 +67,7 @@ public class WhereTrackingService extends Service {
 
     public static final String EXTRA_START_AUTOMATIC_LOCATION_REQUEST = PKG + "location_request";
 
-    public static final String BROADCAST_NEW_LOCATIONS_RESULT = PKG + "new_locations_result";
+    public static final String BROADCAST_NEW_LOCATION_RESULT = PKG + "new_location_result";
 
     public static final String BROADCAST_LOCAL_LOCATION_RESULT = PKG + "local_location_result";
 
@@ -232,46 +231,41 @@ public class WhereTrackingService extends Service {
     }
 
     private void processNewLocations(List<Location> locations, LocationDto.SaveMode saveMode) {
-        // show the timestamp of the latest received location for foreground service
+        // use the latest received location for foreground service - we do not batch so should only ever
+        // get a single one anyway
+        Location location = locations.get(locations.size() - 1);
+
         // if manual, update the notification only if the service is in foreground (already has notification)
         // the activity will show the information even if no notification is used
         if (isAutomatic) {
-            notificationManager.notify(NOTIFICATION_ID, createNotification(locations.get(locations.size() - 1)));
+            notificationManager.notify(NOTIFICATION_ID, createNotification(location));
         }
 
-        ArrayList<LocationDto> locationDtos = new ArrayList<>(locations.size());
-        for (Location location : locations) {
-            LocationDto locationDto = new LocationDto();
-            locationDto.setTimestampUtc(Instant.ofEpochMilli(location.getTime()));
-            locationDto.setTimeZone(ZoneId.systemDefault());
-            locationDto.setLatitude(location.getLatitude());
-            locationDto.setLongitude(location.getLongitude());
-            if (location.hasAccuracy()) {
-                locationDto.setAccuracy((double) location.getAccuracy());
-            }
-            locationDto.setSaveMode(saveMode);
-            locationDtos.add(locationDto);
+        LocationDto locationDto = new LocationDto();
+        locationDto.setTimestampUtc(Instant.ofEpochMilli(location.getTime()));
+        locationDto.setTimeZone(ZoneId.systemDefault());
+        locationDto.setLatitude(location.getLatitude());
+        locationDto.setLongitude(location.getLongitude());
+        if (location.hasAccuracy()) {
+            locationDto.setAccuracy((double) location.getAccuracy());
         }
+        locationDto.setSaveMode(saveMode);
 
         if (dryRun) {
             // dry run, create a dry run result
-            NewLocationsResultDto newLocationsResultDto = new NewLocationsResultDto(locationDtos.size());
-            newLocationsResultDto.setSuccess(true);
-            newLocationsResultDto.setUploadMessage("not uploaded (dry run)");
+            NewLocationResultDto newLocationResultDto = new NewLocationResultDto();
+            newLocationResultDto.setUploadSuccess(true);
+            newLocationResultDto.setUploadMessage("not uploaded (dry run)");
+            newLocationResultDto.setSaveSuccess(true);
+            newLocationResultDto.setSaveMessage("not saved (dry run)");
+            newLocationResultDto.setLocationDto(locationDto);
 
-            for (LocationDto locationDto : locationDtos) {
-                NewLocationResultDto locationResultDto = new NewLocationResultDto();
-                locationResultDto.setSuccess(true);
-                locationResultDto.setSaveMessage("not saved (dry run)");
-                locationResultDto.setLocationDto(locationDto);
-                newLocationsResultDto.getNewLocationResultDtos().add(locationResultDto);
-            }
-
-            broadcastNewLocationsResult(newLocationsResultDto);
+            broadcastNewLocationResult(newLocationResultDto);
         } else {
             LocationListDto listDto = new LocationListDto();
-            listDto.setLocations(locationDtos);
-            whereService.saveLocations(listDto).enqueue(new NewLocationsCallback(locationDtos));
+            listDto.setLocations(Collections.singletonList(locationDto));
+
+            whereService.saveLocations(listDto).enqueue(new NewLocationCallback(locationDto));
         }
     }
 
@@ -349,9 +343,9 @@ public class WhereTrackingService extends Service {
         broadcastMessage("Using dry run: " + dryRun);
     }
 
-    private void broadcastNewLocationsResult(NewLocationsResultDto newLocationsResultDto) {
-        Intent broadcastIntent = new Intent(BROADCAST_NEW_LOCATIONS_RESULT);
-        broadcastIntent.putExtra(EXTRA_PAYLOAD, newLocationsResultDto);
+    private void broadcastNewLocationResult(NewLocationResultDto newLocationResultDto) {
+        Intent broadcastIntent = new Intent(BROADCAST_NEW_LOCATION_RESULT);
+        broadcastIntent.putExtra(EXTRA_PAYLOAD, newLocationResultDto);
         broadcastManager.sendBroadcast(broadcastIntent);
     }
 
@@ -372,56 +366,58 @@ public class WhereTrackingService extends Service {
 
     private class LocationProcessor extends LocationCallback {
 
+        private Instant lastUpdate;
+
         @Override
         public void onLocationResult(LocationResult locationResult) {
-            List<Location> locations = locationResult.getLocations();
-            if (!locations.isEmpty()) {
-                processNewLocations(locations, LocationDto.SaveMode.AUTOMATIC);
+            Instant now = Instant.now();
+            if (lastUpdate == null
+                    || Duration.between(lastUpdate, now).getSeconds() > TrackerActivity.AUTOMATIC_INTERVAL_FILTER) {
+                List<Location> locations = locationResult.getLocations();
+                if (!locations.isEmpty()) {
+                    lastUpdate = now;
+                    processNewLocations(locations, LocationDto.SaveMode.AUTOMATIC);
+                }
             }
         }
     }
 
 
-    private class NewLocationsCallback implements Callback<Void> {
+    private class NewLocationCallback implements Callback<Void> {
 
-        private final List<LocationDto> locationDtos;
+        private final LocationDto locationDto;
 
-        private final NewLocationsResultDto newLocationsResultDto;
+        private final NewLocationResultDto newLocationResultDto;
 
-        private NewLocationsCallback(List<LocationDto> locationDtos) {
-            this.locationDtos = locationDtos;
-            newLocationsResultDto = new NewLocationsResultDto(locationDtos.size());
+        private NewLocationCallback(LocationDto locationDto) {
+            this.locationDto = locationDto;
+            newLocationResultDto = new NewLocationResultDto();
         }
 
         @Override
         public void onResponse(Call<Void> call, Response<Void> response) {
-            process("HTTP code: " + response.code(), response.isSuccessful());
+            process(response.isSuccessful(), "HTTP code: " + response.code());
         }
 
         @Override
         public void onFailure(Call<Void> call, Throwable t) {
-            process("failed: " + t, false);
+            process(false, "failed: " + t);
         }
 
-        private void process(CharSequence uploadMessage, boolean uploaded) {
-            newLocationsResultDto.setSuccess(uploaded);
-            newLocationsResultDto.setUploadMessage(uploadMessage);
-
-            for (LocationDto locationDto : locationDtos) {
-                NewLocationResultDto locationResultDto = new NewLocationResultDto();
-                try {
-                    locationDb.insert(locationDto, uploaded);
-                    locationResultDto.setSuccess(true);
-                    locationResultDto.setSaveMessage("OK");
-                } catch (Throwable t) {
-                    locationResultDto.setSuccess(false);
-                    locationResultDto.setSaveMessage("failed: " + t);
-                }
-                locationResultDto.setLocationDto(locationDto);
-                newLocationsResultDto.getNewLocationResultDtos().add(locationResultDto);
+        private void process(boolean uploadSuccess, CharSequence uploadMessage) {
+            newLocationResultDto.setUploadSuccess(uploadSuccess);
+            newLocationResultDto.setUploadMessage(uploadMessage);
+            try {
+                locationDb.insert(locationDto, uploadSuccess);
+                newLocationResultDto.setSaveSuccess(true);
+                newLocationResultDto.setSaveMessage("OK");
+            } catch (Throwable t) {
+                newLocationResultDto.setSaveSuccess(false);
+                newLocationResultDto.setSaveMessage("failed: " + t);
             }
+            newLocationResultDto.setLocationDto(locationDto);
 
-            broadcastNewLocationsResult(newLocationsResultDto);
+            broadcastNewLocationResult(newLocationResultDto);
         }
     }
 

@@ -3,7 +3,6 @@ package com.where.tracker.activity;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
 
 import android.Manifest;
 import android.app.Activity;
@@ -47,7 +46,6 @@ import com.where.tracker.db.LocationDb;
 import com.where.tracker.dto.LocalLocationResultDto;
 import com.where.tracker.dto.LocationDto;
 import com.where.tracker.dto.NewLocationResultDto;
-import com.where.tracker.dto.NewLocationsResultDto;
 import com.where.tracker.helper.DateTimeHelper;
 import com.where.tracker.helper.SpannableHelper;
 import com.where.tracker.service.WhereTrackingService;
@@ -67,9 +65,9 @@ public class TrackerActivity extends Activity {
 
     private static final int WRITE_REQUEST_CODE = 4;
 
-    private static final int AUTOMATIC_INTERVAL = 10 * 60 * 1000; // record at least every 10 minutes
+    private static final int AUTOMATIC_INTERVAL = 5 * 1000;
 
-    private static final int BATCHING_INTERVAL = 60 * 60 * 1000; // batch processing by hour
+    public static final int AUTOMATIC_INTERVAL_FILTER = 180; // record every 3 minutes
 
     private static final int COLOR_ORANGE = Color.argb(255, 255, 165, 0);
 
@@ -91,19 +89,16 @@ public class TrackerActivity extends Activity {
         logView = findViewById(R.id.logView);
 
         locationRequest = new LocationRequest();
-        // actually, updates may be much more frequent if other apps require this
-        // this is OK with us, but we want the frequency to be at least our setting
+        // configure according to Google recommendations for real-time tracking
         locationRequest.setInterval(AUTOMATIC_INTERVAL);
-        // may batch multiple locations, but may decide not to
-        locationRequest.setMaxWaitTime(BATCHING_INTERVAL);
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
         locationDb = LocationDb.get();
 
         LocalBroadcastManager broadcastManager = LocalBroadcastManager.getInstance(this);
         broadcastManager.registerReceiver(
-                new NewLocationsResultReceiver(),
-                new IntentFilter(WhereTrackingService.BROADCAST_NEW_LOCATIONS_RESULT));
+                new NewLocationResultReceiver(),
+                new IntentFilter(WhereTrackingService.BROADCAST_NEW_LOCATION_RESULT));
         broadcastManager.registerReceiver(
                 new LocalLocationsResultReceiver(),
                 new IntentFilter(WhereTrackingService.BROADCAST_LOCAL_LOCATION_RESULT));
@@ -310,12 +305,14 @@ public class TrackerActivity extends Activity {
     private void assertInPowerWhitelist() {
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         String packageName = getPackageName();
+        // will get rid of this when correct doze behavior is implemented
         if (pm.isIgnoringBatteryOptimizations(packageName)) {
             log("BAT", "App already whitelisted");
             startAutomatic();
         } else {
             Intent intent = new Intent();
             // this is not a Google Play candidate, ignore the warning
+            // will get rid of this when correct doze behavior is implemented
             intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
             intent.setData(Uri.parse("package:" + packageName));
             startActivityForResult(intent, WHITELIST_REQUEST_CODE);
@@ -458,73 +455,53 @@ public class TrackerActivity extends Activity {
     }
 
 
-    private class NewLocationsResultReceiver extends BroadcastReceiver {
+    private class NewLocationResultReceiver extends BroadcastReceiver {
 
         private int receiveCounter;
 
-        private int locationCounter;
-
         @Override
         public void onReceive(Context context, Intent intent) {
-            LocalDateTime now = LocalDateTime.ofInstant(Instant.now(), ZoneId.systemDefault());
-
             ++receiveCounter;
 
-            NewLocationsResultDto newLocationsResultDto =
-                    intent.getParcelableExtra(WhereTrackingService.EXTRA_PAYLOAD);
-            List<NewLocationResultDto> newLocationResultDtos =
-                    newLocationsResultDto.getNewLocationResultDtos();
+            String tag = "#" + receiveCounter;
 
-            String headerTag = "#" + receiveCounter;
-            CharSequence headerLine1 = SpannableHelper.join(" ",
-                    SpannableHelper.coloredString(String.valueOf(newLocationResultDtos.size()), Color.BLUE),
-                    "location(s) at",
-                    DateTimeHelper.date(now),
-                    SpannableHelper.coloredString(DateTimeHelper.time(now), Color.BLUE));
+            NewLocationResultDto newLocationResultDto = intent.getParcelableExtra(WhereTrackingService.EXTRA_PAYLOAD);
+            LocationDto locationDto = newLocationResultDto.getLocationDto();
 
-            CharSequence headerLine2 = SpannableHelper.join(" ",
-                    "Upload:",
-                    coloredDetail(newLocationsResultDto.isSuccess(), newLocationsResultDto.getUploadMessage()));
+            LocalDateTime locationDateTime = LocalDateTime.ofInstant(
+                    locationDto.getTimestampUtc(), ZoneId.systemDefault());
 
-            log(headerTag, headerLine1, headerLine2);
-
-            int i = 1;
-            for (NewLocationResultDto newLocationResultDto : newLocationResultDtos) {
-                ++locationCounter;
-
-                LocationDto locationDto = newLocationResultDto.getLocationDto();
-
-                String locationTag = headerTag + "." + i + "|" + locationCounter;
-
-                LocalDateTime locationDateTime = LocalDateTime.ofInstant(
-                        locationDto.getTimestampUtc(), ZoneId.systemDefault());
-
-                CharSequence line1 = SpannableHelper.join(" ",
-                        DateTimeHelper.date(locationDateTime),
-                        SpannableHelper.boldString(DateTimeHelper.time(locationDateTime)),
-                        "~",
-                        String.valueOf(locationDto.getAccuracy()));
-
-                String modeStr = String.valueOf(locationDto.getSaveMode());
-                CharSequence mode;
-                if (locationDto.getSaveMode() == LocationDto.SaveMode.MANUAL) {
-                    mode = SpannableHelper.boldString(modeStr);
-                } else {
-                    mode = modeStr;
-                }
-
-                CharSequence line2 = SpannableHelper.join(", ",
-                        String.valueOf(locationDto.getLatitude()),
-                        String.valueOf(locationDto.getLongitude()),
-                        mode);
-
-                CharSequence line3 = SpannableHelper.join(" ",
-                        "Save:",
-                        coloredDetail(newLocationResultDto.isSuccess(), newLocationResultDto.getSaveMessage()));
-
-                log(locationTag, line1, line2, line3);
-                ++i;
+            String modeStr = String.valueOf(locationDto.getSaveMode());
+            CharSequence mode;
+            if (locationDto.getSaveMode() == LocationDto.SaveMode.MANUAL) {
+                mode = SpannableHelper.boldString(modeStr);
+            } else {
+                mode = modeStr;
             }
+
+            CharSequence dateTimeLine = SpannableHelper.join("",
+                    DateTimeHelper.date(locationDateTime),
+                    " ",
+                    SpannableHelper.boldString(DateTimeHelper.time(locationDateTime)),
+                    ", ",
+                    mode);
+
+            CharSequence locationLine = SpannableHelper.join("",
+                    String.valueOf(locationDto.getLatitude()),
+                    ", ",
+                    String.valueOf(locationDto.getLongitude()),
+                    " ~ ",
+                    SpannableHelper.coloredString(String.valueOf(locationDto.getAccuracy()), Color.BLUE));
+
+            CharSequence uploadLine = SpannableHelper.join(" ",
+                    "Upload:",
+                    coloredDetail(newLocationResultDto.isUploadSuccess(), newLocationResultDto.getUploadMessage()));
+
+            CharSequence saveLine = SpannableHelper.join(" ",
+                    "Save:",
+                    coloredDetail(newLocationResultDto.isSaveSuccess(), newLocationResultDto.getSaveMessage()));
+
+            log(tag, dateTimeLine, locationLine, uploadLine, saveLine);
         }
 
         private CharSequence coloredDetail(boolean success, CharSequence message) {
@@ -549,25 +526,25 @@ public class TrackerActivity extends Activity {
             LocalLocationResultDto localLocationResultDto =
                     intent.getParcelableExtra(WhereTrackingService.EXTRA_PAYLOAD);
 
-            CharSequence line1Detail;
+            CharSequence uploadLineDetail;
             if (localLocationResultDto.isUploadSuccess()) {
-                line1Detail = localLocationResultDto.getUploadMessage();
+                uploadLineDetail = localLocationResultDto.getUploadMessage();
             } else {
-                line1Detail = SpannableHelper.coloredString(localLocationResultDto.getUploadMessage(), Color.RED);
+                uploadLineDetail = SpannableHelper.coloredString(localLocationResultDto.getUploadMessage(), Color.RED);
             }
-            CharSequence line1 = SpannableHelper.join(" ", "Upload:", line1Detail);
+            CharSequence uploadLine = SpannableHelper.join(" ", "Upload:", uploadLineDetail);
 
-            CharSequence line2Detail;
+            CharSequence markLineDetail;
             if (!localLocationResultDto.isUploadSuccess()) {
-                line2Detail = SpannableHelper.coloredString(localLocationResultDto.getMarkMessage(), COLOR_ORANGE);
+                markLineDetail = SpannableHelper.coloredString(localLocationResultDto.getMarkMessage(), COLOR_ORANGE);
             } else if (!localLocationResultDto.isMarkSuccess()) {
-                line2Detail = SpannableHelper.coloredString(localLocationResultDto.getMarkMessage(), Color.RED);
+                markLineDetail = SpannableHelper.coloredString(localLocationResultDto.getMarkMessage(), Color.RED);
             } else {
-                line2Detail = localLocationResultDto.getMarkMessage();
+                markLineDetail = localLocationResultDto.getMarkMessage();
             }
-            CharSequence line2 = SpannableHelper.join(" ", "Mark:", line2Detail);
+            CharSequence markLine = SpannableHelper.join(" ", "Mark:", markLineDetail);
 
-            log("LOC." + localLocationResultDto.getOrdinal(), line1, line2);
+            log("LOC." + localLocationResultDto.getOrdinal(), uploadLine, markLine);
         }
     }
 

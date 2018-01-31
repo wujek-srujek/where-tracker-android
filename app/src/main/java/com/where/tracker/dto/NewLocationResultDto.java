@@ -14,14 +14,20 @@ import lombok.Setter;
 @NoArgsConstructor
 public class NewLocationResultDto implements Parcelable {
 
-    private boolean success;
+    private boolean uploadSuccess;
+
+    private CharSequence uploadMessage;
+
+    private boolean saveSuccess;
 
     private CharSequence saveMessage;
 
     private LocationDto locationDto;
 
     private NewLocationResultDto(Parcel in) {
-        success = in.readInt() != 0;
+        uploadSuccess = in.readInt() != 0;
+        uploadMessage = TextUtils.CHAR_SEQUENCE_CREATOR.createFromParcel(in);
+        saveSuccess = in.readInt() != 0;
         saveMessage = TextUtils.CHAR_SEQUENCE_CREATOR.createFromParcel(in);
         locationDto = in.readTypedObject(LocationDto.CREATOR);
     }
@@ -47,7 +53,9 @@ public class NewLocationResultDto implements Parcelable {
 
     @Override
     public void writeToParcel(Parcel parcel, int flags) {
-        parcel.writeInt(success ? 1 : 0);
+        parcel.writeInt(uploadSuccess ? 1 : 0);
+        TextUtils.writeToParcel(uploadMessage, parcel, flags);
+        parcel.writeInt(saveSuccess ? 1 : 0);
         TextUtils.writeToParcel(saveMessage, parcel, flags);
         parcel.writeTypedObject(locationDto, flags);
     }
