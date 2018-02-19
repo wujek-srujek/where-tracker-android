@@ -12,7 +12,6 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
-import android.graphics.drawable.Icon;
 import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
@@ -319,19 +318,10 @@ public class WhereTrackingService extends Service {
         activityIntent.addCategory("android.intent.category.LAUNCHER");
         PendingIntent activityPendingIntent = PendingIntent.getActivity(this, 0, activityIntent, 0);
 
-        Intent stopIntent = new Intent(this, WhereTrackingService.class);
-        stopIntent.setAction(COMMAND_STOP_AUTOMATIC);
-        PendingIntent stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, 0);
-        Notification.Action stopAction = new Notification.Action.Builder(
-                Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-                "Stop", stopPendingIntent)
-                .build();
-
         Notification.Builder builder = new Notification.Builder(this)
                 .setOngoing(true)
                 .setSmallIcon(R.drawable.ic_stat_tracking)
-                .setContentIntent(activityPendingIntent)
-                .addAction(stopAction);
+                .setContentIntent(activityPendingIntent);
 
         if (location == null) {
             builder = builder.setContentText("No location yet");
