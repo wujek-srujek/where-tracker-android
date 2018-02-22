@@ -25,7 +25,7 @@ android {
 }
 
 ext {
-    lombok = 'org.projectlombok:lombok:1.16.18'
+    lombok = 'org.projectlombok:lombok:1.16.20'
     playServicesVersion = '11.8.0'
     retrofitVersion = '2.3.0'
 }
