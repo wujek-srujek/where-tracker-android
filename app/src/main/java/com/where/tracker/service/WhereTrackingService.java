@@ -284,11 +284,6 @@ public class WhereTrackingService extends Service {
     }
 
     private void uploadIfNeeded() {
-        if (dryRun) {
-            broadcastMessage("Not processing local locations (dry run)");
-            return;
-        }
-
         Map<Long, LocationDto> notUploaded = locationDb.getNotUploaded();
         if (notUploaded.isEmpty()) {
             broadcastMessage("Nothing to upload");
